@@ -149,6 +149,35 @@ describe("parsePollActivity", () => {
     });
   });
 
+  it("reads an itemized expiry date change", () => {
+    const event = parsePollActivity({
+      ...emptyRefs,
+      type: "poll_updated",
+      userId: "u1",
+      payload: {
+        changes: [
+          {
+            field: "expiresAt",
+            action: "changed",
+            from: "2026-12-31",
+            to: "2027-01-15",
+          },
+        ],
+      },
+    });
+
+    expect(event?.payload).toEqual({
+      changes: [
+        {
+          field: "expiresAt",
+          action: "changed",
+          from: "2026-12-31",
+          to: "2027-01-15",
+        },
+      ],
+    });
+  });
+
   it("returns null for a type outside this version's vocabulary", () => {
     const event = parsePollActivity({
       ...emptyRefs,

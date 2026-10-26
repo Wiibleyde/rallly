@@ -412,18 +412,30 @@ describe("expiry date", () => {
     expect(formatExpiryDate(date)).toBe("2026-12-31");
   });
 
-  it("cuts off at the start of the current UTC day", () => {
+  it("cuts off at the start of the previous UTC day", () => {
     expect(
       getExpiryCutoff(new Date("2026-03-10T23:59:59.000Z")).toISOString(),
-    ).toBe("2026-03-10T00:00:00.000Z");
+    ).toBe("2026-03-09T00:00:00.000Z");
   });
 
-  it("keeps a poll expiring today live until the date rolls over", () => {
+  it("keeps polls expiring today and yesterday live", () => {
     const now = new Date("2026-03-10T12:00:00.000Z");
     const cutoff = getExpiryCutoff(now);
 
     expect(parseExpiryDate("2026-03-10") < cutoff).toBe(false);
-    expect(parseExpiryDate("2026-03-09") < cutoff).toBe(true);
+    expect(parseExpiryDate("2026-03-09") < cutoff).toBe(false);
+    expect(parseExpiryDate("2026-03-08") < cutoff).toBe(true);
+  });
+
+  it("deletes a poll only once its date has ended in every time zone", () => {
+    const expiresAt = parseExpiryDate("2026-03-10");
+
+    expect(
+      expiresAt < getExpiryCutoff(new Date("2026-03-11T23:59:00.000Z")),
+    ).toBe(false);
+    expect(
+      expiresAt < getExpiryCutoff(new Date("2026-03-12T00:00:00.000Z")),
+    ).toBe(true);
   });
 
   it("allows today and tomorrow", () => {

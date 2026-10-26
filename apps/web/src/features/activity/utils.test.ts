@@ -7,6 +7,7 @@ const prior = {
   location: "Cafe",
   conferencing: null,
   timeZone: "Europe/London",
+  expiresAt: null,
   hideParticipants: false,
   hideScores: false,
   disableComments: false,
@@ -68,6 +69,62 @@ describe("getPollChanges", () => {
     expect(getPollChanges({ prior, next: { timeZone: null } })).toEqual([
       { field: "timeZone", from: "Europe/London" },
     ]);
+  });
+
+  it("records an expiry date being set, with no previous date", () => {
+    expect(
+      getPollChanges({
+        prior,
+        next: { ...unchanged, expiresAt: "2026-12-31" },
+      }),
+    ).toEqual([
+      { field: "expiresAt", action: "added", from: null, to: "2026-12-31" },
+    ]);
+  });
+
+  it("records a changed expiry date with the previous one", () => {
+    expect(
+      getPollChanges({
+        prior: { ...prior, expiresAt: new Date("2026-12-31T00:00:00.000Z") },
+        next: { ...unchanged, expiresAt: "2027-01-15" },
+      }),
+    ).toEqual([
+      {
+        field: "expiresAt",
+        action: "changed",
+        from: "2026-12-31",
+        to: "2027-01-15",
+      },
+    ]);
+  });
+
+  it("records a removed expiry date", () => {
+    expect(
+      getPollChanges({
+        prior: { ...prior, expiresAt: new Date("2026-12-31T00:00:00.000Z") },
+        next: { ...unchanged, expiresAt: null },
+      }),
+    ).toEqual([
+      { field: "expiresAt", action: "removed", from: "2026-12-31", to: null },
+    ]);
+  });
+
+  it("records nothing when the expiry date is unchanged or omitted", () => {
+    const withExpiry = {
+      ...prior,
+      expiresAt: new Date("2026-12-31T00:00:00.000Z"),
+    };
+
+    expect(
+      getPollChanges({
+        prior: withExpiry,
+        next: { ...unchanged, expiresAt: "2026-12-31" },
+      }),
+    ).toEqual([]);
+    expect(getPollChanges({ prior: withExpiry, next: unchanged })).toEqual([]);
+    expect(
+      getPollChanges({ prior, next: { ...unchanged, expiresAt: null } }),
+    ).toEqual([]);
   });
 
   it("records each setting turned on with its previous value", () => {

@@ -70,6 +70,14 @@ export const pollChangeSchema = z.discriminatedUnion("field", [
     from: pollConferencingSchema.nullable(),
   }),
   z.object({ field: z.literal("timeZone"), from: z.string().nullable() }),
+  z.object({
+    field: z.literal("expiresAt"),
+    action: changeActionSchema,
+    // ISO YYYY-MM-DD dates, null when there was none. The new date is kept
+    // too: the poll's current one can't describe an edit that was overwritten.
+    from: z.string().nullable(),
+    to: z.string().nullable(),
+  }),
   z.object({ field: z.literal("hideParticipants"), from: z.boolean() }),
   z.object({ field: z.literal("hideScores"), from: z.boolean() }),
   z.object({ field: z.literal("disableComments"), from: z.boolean() }),

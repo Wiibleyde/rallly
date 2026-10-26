@@ -1,4 +1,5 @@
 import type { PollConferencing } from "@/features/conferencing/schema";
+import { toISODate } from "@/lib/datetime/utils";
 import type { PollChange } from "./schema";
 
 type ChangeAction = "added" | "changed" | "removed";
@@ -31,6 +32,7 @@ export function getPollChanges({
     location: string | null;
     conferencing: PollConferencing | null;
     timeZone: string | null;
+    expiresAt: Date | null;
   } & PollSettings;
   next: {
     title?: string;
@@ -38,6 +40,7 @@ export function getPollChanges({
     location?: string;
     conferencing?: PollConferencing | null;
     timeZone: string | null;
+    expiresAt?: string | null;
   } & Partial<PollSettings>;
 }): PollChange[] {
   const changes: PollChange[] = [];
@@ -71,6 +74,18 @@ export function getPollChanges({
 
   if (next.timeZone !== prior.timeZone) {
     changes.push({ field: "timeZone", from: prior.timeZone });
+  }
+
+  if (next.expiresAt !== undefined) {
+    const from = prior.expiresAt ? toISODate(prior.expiresAt) : null;
+    if (from !== next.expiresAt) {
+      changes.push({
+        field: "expiresAt",
+        action: getChangeAction(from, next.expiresAt),
+        from,
+        to: next.expiresAt,
+      });
+    }
   }
 
   for (const field of settingFields) {

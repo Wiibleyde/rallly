@@ -277,6 +277,16 @@ test.describe("House-keeping API", () => {
     });
     createdPollIds.push(expiredPoll.id);
 
+    // Expired yesterday (UTC): the date may not have ended everywhere yet
+    const expiredYesterdayPoll = await createTestPoll({
+      id: "expired-yesterday-poll",
+      title: "Expired yesterday",
+      userId: owner.id,
+      updatedAt: fromNow({}),
+      expiresAt: fromNow({ days: -1 }),
+    });
+    createdPollIds.push(expiredYesterdayPoll.id);
+
     const expiresLaterPoll = await createTestPoll({
       id: "expires-later-poll",
       title: "Expires later",
@@ -312,7 +322,11 @@ test.describe("House-keeping API", () => {
       expect(poll?.deletedAt).not.toBeNull();
     }
 
-    for (const id of [expiresLaterPoll.id, noExpiryPoll.id]) {
+    for (const id of [
+      expiredYesterdayPoll.id,
+      expiresLaterPoll.id,
+      noExpiryPoll.id,
+    ]) {
       const poll = await find(id);
       expect(poll?.deleted).toBe(false);
       expect(poll?.deletedAt).toBeNull();

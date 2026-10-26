@@ -10,6 +10,7 @@ import {
   CalendarCheckIcon,
   CalendarMinusIcon,
   CalendarPlusIcon,
+  CalendarXIcon,
   CircleStopIcon,
   GlobeIcon,
   ListChecksIcon,
@@ -38,7 +39,9 @@ import {
   EventTimeRange,
 } from "@/features/scheduled-event/components/event-date-time";
 import { Trans } from "@/i18n/client";
+import { CalendarDate } from "@/lib/datetime/calendar-date";
 import { Time } from "@/lib/datetime/time";
+import { calendarDateToUTCMidnight } from "@/lib/datetime/utils";
 
 type ActivityRow = {
   id: string;
@@ -163,6 +166,7 @@ const iconByChange: Record<PollChange["field"], LucideIcon> = {
   location: MapPinIcon,
   conferencing: VideoIcon,
   timeZone: GlobeIcon,
+  expiresAt: CalendarXIcon,
   hideParticipants: VenetianMaskIcon,
   hideScores: BarChart2Icon,
   disableComments: MessageCircleIcon,
@@ -272,6 +276,31 @@ function ChangeDescription({ change }: { change: PollChange }) {
         <Trans
           i18nKey="pollActivityTimeZoneChanged"
           defaults="Time zone changed"
+        />
+      );
+    case "expiresAt":
+      return change.action === "removed" || !change.to ? (
+        <Trans
+          i18nKey="pollActivityExpiryRemoved"
+          defaults="Expiry date removed"
+        />
+      ) : change.action === "changed" && change.from ? (
+        <Trans
+          i18nKey="pollActivityExpiryChanged"
+          defaults="Expiry date changed from <date/>"
+          components={{
+            date: (
+              <CalendarDate value={calendarDateToUTCMidnight(change.from)} />
+            ),
+          }}
+        />
+      ) : (
+        <Trans
+          i18nKey="pollActivityExpiryAdded"
+          defaults="Expiry date set to <date/>"
+          components={{
+            date: <CalendarDate value={calendarDateToUTCMidnight(change.to)} />,
+          }}
         />
       );
     case "hideParticipants":

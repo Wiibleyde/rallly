@@ -335,7 +335,9 @@ export async function deleteInactivePolls() {
 }
 
 /**
- * Marks polls whose organizer-set expiry date has passed as deleted. Unlike
+ * Marks polls whose organizer-set expiry date has passed everywhere as deleted,
+ * which is once UTC day D+2 starts for an expiry date D (see getExpiryCutoff,
+ * and note this keeps polls up to a day longer in UTC). Unlike
  * deleteInactivePolls this ignores the space's plan, the poll's activity and
  * its dates: an explicit date is the organizer's decision and always wins.
  * Hard removal follows through removeDeletedPolls after the same 7 day grace.

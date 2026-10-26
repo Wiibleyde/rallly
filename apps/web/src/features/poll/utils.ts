@@ -302,9 +302,11 @@ export function isExpiryDateInPast(value: string, now = new Date()) {
 }
 
 /**
- * Polls whose expiry is before this have outlived their last day. Day
- * granular: a poll expiring today is still live until the date rolls over.
+ * Polls whose expiry is before this have outlived their last day everywhere.
+ * An expiry date D is a floating calendar date, and time zones reach UTC−12,
+ * so D only ends for everyone when UTC day D+2 starts. The cutoff is the start
+ * of the previous UTC day, so a poll expiring on D is kept until then.
  */
 export function getExpiryCutoff(now = new Date()) {
-  return new Date(startOfUtcDay(now));
+  return new Date(startOfUtcDay(now) - DAY_MS);
 }

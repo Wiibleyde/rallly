@@ -1,7 +1,9 @@
 "use client";
 
 import { posthog } from "@rallly/posthog/client";
+import { Button } from "@rallly/ui/button";
 import { Card, CardContent, CardTitle } from "@rallly/ui/card";
+import { DatePicker } from "@rallly/ui/date-picker";
 import {
   Field,
   FieldContent,
@@ -21,6 +23,7 @@ import { Switch } from "@rallly/ui/switch";
 import { VoteIcon } from "@rallly/ui/vote-icon";
 import {
   BarChart2Icon,
+  CalendarXIcon,
   ListChecksIcon,
   MailIcon,
   MessageCircleIcon,
@@ -322,6 +325,60 @@ export const PollSettingsForm = ({
                 </Field>
               );
             }}
+          />
+          <FormField
+            control={form.control}
+            name="expiresAt"
+            render={({ field }) => (
+              // Responsive for the same reason as the vote options: the picker
+              // is far wider than a switch.
+              <Field
+                orientation="responsive"
+                className="@md/field-group:gap-2 gap-4"
+              >
+                <SettingIcon>
+                  <CalendarXIcon />
+                </SettingIcon>
+                <FieldContent>
+                  <FieldLabel id="poll-expiry-label">
+                    <Trans i18nKey="expiryDateTitle" defaults="Expiry date" />
+                  </FieldLabel>
+                  <FieldDescription>
+                    <Trans
+                      i18nKey="expiryDateDescription"
+                      defaults="Delete the poll automatically after this date. Leave it empty to use the default clean-up of inactive polls after their last date."
+                    />
+                  </FieldDescription>
+                </FieldContent>
+                <div className="flex items-center gap-x-2">
+                  <DatePicker
+                    aria-labelledby="poll-expiry-label"
+                    disallowPast
+                    value={field.value ?? null}
+                    onChange={(value) => {
+                      field.onChange(value);
+                      posthog?.capture("poll_settings:expiry_date_change", {
+                        has_expiry: !!value,
+                      });
+                    }}
+                  />
+                  {field.value ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => {
+                        field.onChange(null);
+                        posthog?.capture("poll_settings:expiry_date_change", {
+                          has_expiry: false,
+                        });
+                      }}
+                    >
+                      <Trans i18nKey="clear" defaults="Clear" />
+                    </Button>
+                  ) : null}
+                </div>
+              </Field>
+            )}
           />
         </FieldGroup>
       </CardContent>

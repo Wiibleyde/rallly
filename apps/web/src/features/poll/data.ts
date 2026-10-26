@@ -736,6 +736,7 @@ export async function getPollDetails({
       allowTentativeVotes: true,
       hideScores: true,
       requireParticipantEmail: true,
+      expiresAt: true,
       muted: true,
       userId: true,
       spaceId: true,

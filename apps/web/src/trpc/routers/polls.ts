@@ -41,6 +41,7 @@ import {
 import { MAX_POLL_DESCRIPTION_LENGTH } from "@/features/poll/schema";
 import {
   getFinalizePlanGate,
+  parseExpiryDate,
   summarizeNotifySelection,
 } from "@/features/poll/utils";
 import { queueReviewRequest } from "@/features/review-request/mutations";
@@ -71,7 +72,7 @@ import {
 } from "../trpc";
 import { invites } from "./polls/invites";
 import { getScheduledEventTimes } from "./polls/scheduled-event-times";
-import { timeZoneInput } from "./polls/schema";
+import { expiryDateInput, timeZoneInput } from "./polls/schema";
 
 const collapseNewlines = (s: string) => s.replace(/\n{3,}/g, "\n\n");
 
@@ -220,6 +221,7 @@ export const polls = router({
         disableComments: z.boolean().optional(),
         allowTentativeVotes: z.boolean().optional(),
         requireParticipantEmail: z.boolean().optional(),
+        expiresAt: expiryDateInput.optional(),
         options: z
           .object({
             startDate: z.string(),
@@ -349,6 +351,9 @@ export const polls = router({
             allowTentativeVotes: input.allowTentativeVotes,
             hideScores: input.hideScores,
             requireParticipantEmail: input.requireParticipantEmail,
+            expiresAt: input.expiresAt
+              ? parseExpiryDate(input.expiresAt)
+              : null,
             spaceId,
           },
         });
@@ -427,6 +432,7 @@ export const polls = router({
           hideParticipants: poll.hideParticipants,
           hideScores: poll.hideScores,
           requireParticipantEmail: poll.requireParticipantEmail,
+          hasExpiry: !!poll.expiresAt,
           isGuest: ctx.user.isGuest,
         },
         groups: {
@@ -459,6 +465,8 @@ export const polls = router({
         allowTentativeVotes: z.boolean().optional(),
         hideScores: z.boolean().optional(),
         requireParticipantEmail: z.boolean().optional(),
+        // Omitted leaves it unchanged; null removes it.
+        expiresAt: expiryDateInput.nullable().optional(),
       }),
     )
     .use(requireUserMiddleware)
@@ -699,6 +707,12 @@ export const polls = router({
             disableComments: input.disableComments,
             allowTentativeVotes: input.allowTentativeVotes,
             requireParticipantEmail: input.requireParticipantEmail,
+            expiresAt:
+              input.expiresAt === undefined
+                ? undefined
+                : input.expiresAt === null
+                  ? null
+                  : parseExpiryDate(input.expiresAt),
             kind,
           },
         });
@@ -863,7 +877,8 @@ export const polls = router({
         input.disableComments !== undefined ||
         input.allowTentativeVotes !== undefined ||
         input.hideScores !== undefined ||
-        input.requireParticipantEmail !== undefined;
+        input.requireParticipantEmail !== undefined ||
+        input.expiresAt !== undefined;
 
       if (hasDetailsUpdate) {
         track(ctx.user, {

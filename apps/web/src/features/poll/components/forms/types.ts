@@ -27,6 +27,9 @@ export type PollSettingsFormData = {
   hideScores: boolean;
   enableComments: boolean;
   allowTentativeVotes: boolean;
+  // An ISO calendar date (YYYY-MM-DD), null for none. Null rather than an
+  // empty string because JSON storage keeps it, unlike undefined.
+  expiresAt?: string | null;
 };
 
 export type NewEventData = PollDetailsData &

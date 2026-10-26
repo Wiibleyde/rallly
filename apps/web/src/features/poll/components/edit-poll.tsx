@@ -31,7 +31,10 @@ import type {
 import { useUpdatePollMutation } from "@/features/poll/components/mutations";
 import { SelectedOptionsCount } from "@/features/poll/components/selected-options-count";
 import type { PollDetails } from "@/features/poll/types";
-import { filterParticipantsByVote } from "@/features/poll/utils";
+import {
+  filterParticipantsByVote,
+  formatExpiryDate,
+} from "@/features/poll/utils";
 import { useUser } from "@/features/user/client";
 import { Trans, useTranslation } from "@/i18n/client";
 import {
@@ -93,6 +96,7 @@ function getDefaultValues(poll: PollDetails): NewEventData {
     enableComments: !poll.disableComments,
     allowTentativeVotes: poll.allowTentativeVotes,
     requireParticipantEmail: poll.requireParticipantEmail,
+    expiresAt: poll.expiresAt ? formatExpiryDate(poll.expiresAt) : null,
   };
 }
 
@@ -166,6 +170,7 @@ const settingFields = [
   "enableComments",
   "allowTentativeVotes",
   "requireParticipantEmail",
+  "expiresAt",
 ] as const;
 
 /**
@@ -234,6 +239,11 @@ export function EditPoll({
       input.disableComments = !data.enableComments;
       input.allowTentativeVotes = data.allowTentativeVotes;
       input.requireParticipantEmail = data.requireParticipantEmail;
+      // Only sent when it moved: a stored date that has since slipped into the
+      // past would otherwise fail validation on an unrelated settings edit.
+      if (isChanged("expiresAt")) {
+        input.expiresAt = data.expiresAt || null;
+      }
     }
 
     if (!detailsChanged && !dateChanges && !settingsChanged) {

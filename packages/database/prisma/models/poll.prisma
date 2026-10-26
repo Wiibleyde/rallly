@@ -34,6 +34,8 @@ model Poll {
   createdAt               DateTime          @default(now()) @map("created_at")
   updatedAt               DateTime          @updatedAt @map("updated_at")
   deadline                DateTime?
+  /// Last day the poll lives, a calendar date with no time or zone (UTC midnight, like all-day options). Once it has passed the poll is deleted whatever its plan or activity. Null falls back to the inactivity clean-up.
+  expiresAt               DateTime?         @map("expires_at") @db.Date
   title                   String
   description             String?
   location                String?
@@ -74,6 +76,7 @@ model Poll {
 
   @@index([spaceId])
   @@index([userId])
+  @@index([expiresAt])
   @@map("polls")
 }
 

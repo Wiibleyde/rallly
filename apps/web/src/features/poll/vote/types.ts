@@ -37,6 +37,8 @@ export type VotePageView = {
     userId: string | null;
     spaceId: string | null;
     requireParticipantEmail: boolean;
+    /** Last day the poll lives, as UTC midnight of that calendar date. */
+    expiresAt: Date | null;
     user: { name: string } | null;
     space: {
       name: string;

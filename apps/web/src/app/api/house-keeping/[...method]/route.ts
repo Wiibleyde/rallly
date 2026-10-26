@@ -10,6 +10,7 @@ import {
 } from "@/features/billing/mutations";
 import {
   autoClosePolls,
+  deleteExpiredPolls,
   deleteInactivePolls,
   removeDeletedPolls,
 } from "@/features/poll/mutations";
@@ -53,6 +54,22 @@ app.get("/delete-inactive-polls", async (c) => {
   logger.info(
     { task: "delete-inactive-polls", markedDeleted },
     "Marked inactive polls as deleted",
+  );
+
+  return c.json({
+    success: true,
+    summary: {
+      markedDeleted,
+    },
+  });
+});
+
+app.get("/delete-expired-polls", async (c) => {
+  const markedDeleted = await deleteExpiredPolls();
+
+  logger.info(
+    { task: "delete-expired-polls", markedDeleted },
+    "Marked polls past their expiry date as deleted",
   );
 
   return c.json({

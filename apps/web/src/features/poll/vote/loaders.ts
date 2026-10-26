@@ -76,6 +76,7 @@ export const loadVotePage = cache(
         userId: poll.userId,
         spaceId: poll.spaceId,
         requireParticipantEmail: poll.requireParticipantEmail,
+        expiresAt: poll.expiresAt,
         user: poll.user ? { name: poll.user.name } : null,
         space: poll.space
           ? {

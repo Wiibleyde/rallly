@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import { recordPollActivities } from "@/features/activity/mutations";
 import { parsePollConferencing } from "@/features/conferencing/data";
 import type { PollConferencing } from "@/features/conferencing/schema";
+import { getExpiryCutoff } from "@/features/poll/utils";
 import type { AuthorizedSpaceId } from "@/features/space/types";
 import { scheduleWebhookDispatch } from "@/features/webhook/mutations";
 
@@ -331,6 +332,27 @@ export async function deleteInactivePolls() {
   });
 
   return markedDeleted;
+}
+
+/**
+ * Marks polls whose organizer-set expiry date has passed as deleted. Unlike
+ * deleteInactivePolls this ignores the space's plan, the poll's activity and
+ * its dates: an explicit date is the organizer's decision and always wins.
+ * Hard removal follows through removeDeletedPolls after the same 7 day grace.
+ */
+export async function deleteExpiredPolls() {
+  const { count } = await prisma.poll.updateMany({
+    where: {
+      deleted: false,
+      expiresAt: { lt: getExpiryCutoff() },
+    },
+    data: {
+      deleted: true,
+      deletedAt: new Date(),
+    },
+  });
+
+  return count;
 }
 
 /**

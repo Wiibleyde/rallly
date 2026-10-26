@@ -276,3 +276,35 @@ export function getFinalizePlanGate({
   }
   return null;
 }
+
+const startOfUtcDay = (date: Date) =>
+  Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+
+/**
+ * The calendar date an organizer picked as a stored value: UTC midnight, the
+ * same floating convention as all-day options.
+ */
+export function parseExpiryDate(value: string) {
+  return new Date(`${value}T00:00:00.000Z`);
+}
+
+export function formatExpiryDate(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+/**
+ * Rejects an expiry that is already behind us. A day of leeway, because the
+ * date picker's "today" is the viewer's calendar date, which can trail UTC's
+ * by up to a day.
+ */
+export function isExpiryDateInPast(value: string, now = new Date()) {
+  return parseExpiryDate(value).getTime() < startOfUtcDay(now) - DAY_MS;
+}
+
+/**
+ * Polls whose expiry is before this have outlived their last day. Day
+ * granular: a poll expiring today is still live until the date rolls over.
+ */
+export function getExpiryCutoff(now = new Date()) {
+  return new Date(startOfUtcDay(now));
+}

@@ -146,6 +146,7 @@ export async function createTestPoll({
   hasFutureOptions = false,
   participantActiveAt,
   commentCreatedAt,
+  expiresAt,
 }: {
   id: string;
   title: string;
@@ -155,6 +156,7 @@ export async function createTestPoll({
   hasFutureOptions?: boolean;
   participantActiveAt?: Date;
   commentCreatedAt?: Date;
+  expiresAt?: Date;
 }) {
   const pollData = {
     id,
@@ -162,6 +164,7 @@ export async function createTestPoll({
     userId,
     spaceId,
     updatedAt,
+    expiresAt,
     ...(participantActiveAt && {
       participants: {
         create: {

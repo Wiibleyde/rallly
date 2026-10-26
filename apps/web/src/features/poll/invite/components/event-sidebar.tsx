@@ -1,4 +1,4 @@
-import { MapPinIcon, User2Icon } from "lucide-react";
+import { CalendarXIcon, MapPinIcon, User2Icon } from "lucide-react";
 import { Trans } from "react-i18next/TransWithoutContext";
 import { PollConferencingSummary } from "@/features/conferencing/components/poll-conferencing-summary";
 import type { PollConferencing } from "@/features/conferencing/schema";
@@ -12,6 +12,7 @@ import TruncatedLinkify from "@/features/poll/components/truncated-linkify";
 import { PoweredByLink } from "@/features/poll/vote/components/powered-by-link";
 import { SpaceIcon } from "@/features/space/components/space-icon";
 import { getTranslation } from "@/i18n/server";
+import { CalendarDate } from "@/lib/datetime/calendar-date";
 import { VoteLegend } from "./vote-legend";
 
 type SidebarPoll = {
@@ -22,6 +23,7 @@ type SidebarPoll = {
   conferencing: PollConferencing | null;
   event: { conferencingUri: string | null } | null;
   allowTentativeVotes: boolean;
+  expiresAt: Date | null;
   spaceId: string | null;
   user: { name: string } | null;
   space: { name: string; image: string | null; showBranding: boolean } | null;
@@ -102,6 +104,19 @@ export async function EventSidebar({
               <PollConferencingSummary
                 conferencing={poll.conferencing}
                 meetingUri={poll.event?.conferencingUri}
+              />
+            </EventMetaItem>
+          ) : null}
+          {poll.expiresAt ? (
+            <EventMetaItem>
+              <CalendarXIcon />
+              <Trans
+                t={t}
+                i18n={i18n}
+                ns="app"
+                i18nKey="pollExpiresOn"
+                defaults="Expires on <date/>"
+                components={{ date: <CalendarDate value={poll.expiresAt} /> }}
               />
             </EventMetaItem>
           ) : null}

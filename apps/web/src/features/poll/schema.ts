@@ -39,3 +39,7 @@ export const setPollMutedSchema = z.object({
   pollId: z.string(),
   muted: z.boolean(),
 });
+
+// A calendar date with no time or zone, like an all-day option: the last day
+// the poll lives. null clears it.
+export const pollExpiryDateSchema = z.iso.date();

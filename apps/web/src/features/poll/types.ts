@@ -19,6 +19,8 @@ export type PollDetails = {
   allowTentativeVotes: boolean;
   hideScores: boolean;
   requireParticipantEmail: boolean;
+  /** Last day the poll lives, as UTC midnight of that calendar date. */
+  expiresAt: Date | null;
   muted: boolean;
   timeZone: string | null;
   userId: string | null;

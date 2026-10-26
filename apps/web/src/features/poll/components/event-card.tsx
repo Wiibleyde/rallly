@@ -1,7 +1,7 @@
 "use client";
 import { cn } from "@rallly/ui";
 import { Card, CardContent } from "@rallly/ui/card";
-import { MapPinIcon, User2Icon } from "lucide-react";
+import { CalendarXIcon, MapPinIcon, User2Icon } from "lucide-react";
 import { RandomGradientBar } from "@/components/random-gradient-bar";
 import { useBranding } from "@/features/branding/client";
 import { PollConferencingSummary } from "@/features/conferencing/components/poll-conferencing-summary";
@@ -16,6 +16,7 @@ import TruncatedLinkify from "@/features/poll/components/truncated-linkify";
 import VoteIcon from "@/features/poll/components/vote-icon";
 import { SpaceIcon } from "@/features/space/components/space-icon";
 import { Trans } from "@/i18n/client";
+import { CalendarDate } from "@/lib/datetime/calendar-date";
 
 function IconDescriptionList({
   className,
@@ -107,6 +108,16 @@ export function EventDetails({
             <PollConferencingSummary
               conferencing={poll.conferencing}
               meetingUri={poll.event?.conferencingUri}
+            />
+          </EventMetaItem>
+        ) : null}
+        {poll.expiresAt ? (
+          <EventMetaItem>
+            <CalendarXIcon />
+            <Trans
+              i18nKey="pollExpiresOn"
+              defaults="Expires on <date/>"
+              components={{ date: <CalendarDate value={poll.expiresAt} /> }}
             />
           </EventMetaItem>
         ) : null}

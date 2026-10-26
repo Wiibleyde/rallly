@@ -16,6 +16,10 @@
       "schedule": "0 6 * * *"
     },
     {
+      "path": "/api/house-keeping/delete-expired-polls",
+      "schedule": "15 6 * * *"
+    },
+    {
       "path": "/api/house-keeping/remove-deleted-polls",
       "schedule": "30 6 * * *"
     },

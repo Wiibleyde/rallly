@@ -2,8 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   filterCommentsForViewer,
   filterParticipantsByVote,
+  formatExpiryDate,
+  getExpiryCutoff,
   getFinalizePlanGate,
+  isExpiryDateInPast,
   maskParticipantsForViewer,
+  parseExpiryDate,
   rankOptionsByPopularity,
   summarizeNotifySelection,
   toAvailabilitySpans,
@@ -397,5 +401,47 @@ describe("summarizeNotifySelection", () => {
     });
     expect(summary.notify_eligible_no_response).toBe(1);
     expect(summary.notify_selected_no_response).toBe(1);
+  });
+});
+
+describe("expiry date", () => {
+  it("round-trips a calendar date through UTC midnight", () => {
+    const date = parseExpiryDate("2026-12-31");
+
+    expect(date.toISOString()).toBe("2026-12-31T00:00:00.000Z");
+    expect(formatExpiryDate(date)).toBe("2026-12-31");
+  });
+
+  it("cuts off at the start of the current UTC day", () => {
+    expect(
+      getExpiryCutoff(new Date("2026-03-10T23:59:59.000Z")).toISOString(),
+    ).toBe("2026-03-10T00:00:00.000Z");
+  });
+
+  it("keeps a poll expiring today live until the date rolls over", () => {
+    const now = new Date("2026-03-10T12:00:00.000Z");
+    const cutoff = getExpiryCutoff(now);
+
+    expect(parseExpiryDate("2026-03-10") < cutoff).toBe(false);
+    expect(parseExpiryDate("2026-03-09") < cutoff).toBe(true);
+  });
+
+  it("allows today and tomorrow", () => {
+    const now = new Date("2026-03-10T12:00:00.000Z");
+
+    expect(isExpiryDateInPast("2026-03-10", now)).toBe(false);
+    expect(isExpiryDateInPast("2026-03-11", now)).toBe(false);
+  });
+
+  it("allows yesterday for viewers whose calendar day trails UTC", () => {
+    const now = new Date("2026-03-10T01:00:00.000Z");
+
+    expect(isExpiryDateInPast("2026-03-09", now)).toBe(false);
+  });
+
+  it("rejects dates further back", () => {
+    const now = new Date("2026-03-10T12:00:00.000Z");
+
+    expect(isExpiryDateInPast("2026-03-08", now)).toBe(true);
   });
 });

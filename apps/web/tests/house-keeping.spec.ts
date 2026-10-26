@@ -15,6 +15,7 @@ import {
  * 2. remove-deleted-polls: Permanently removes polls that have been marked as deleted for more than 7 days
  * 3. auto-close-polls: Closes open polls whose options have all ended
  * 4. delete-orphaned-anonymous-users: Deletes idle guests that own no resources
+ * 5. delete-expired-polls: Marks polls past their organizer-set expiry date as deleted
  */
 
 // Session length; anything below now - this cutoff is provably session-less.
@@ -235,6 +236,87 @@ test.describe("House-keeping API", () => {
     });
     expect(deletedPollWithOldActivity?.deleted).toBe(true);
     expect(deletedPollWithOldActivity?.deletedAt).not.toBeNull();
+  });
+
+  test("should mark polls past their expiry date as deleted regardless of plan or activity", async ({
+    request,
+    baseURL,
+  }) => {
+    const owner = await createUserInDb({
+      name: "Expiry Owner",
+      email: "expiry-owner@example.com",
+    });
+    createdUserIds.push(owner.id);
+
+    const paidSpace = await createSpaceInDb({
+      name: "Expiry Paid Space",
+      ownerId: owner.id,
+      tier: "pro",
+    });
+
+    // Recent, active, with future dates and in a paid space: every rule the
+    // inactivity clean-up respects. Only the expiry date can delete these.
+    const expiredPaidPoll = await createTestPoll({
+      id: "expired-paid-poll",
+      title: "Expired poll in a paid space",
+      userId: owner.id,
+      spaceId: paidSpace.id,
+      updatedAt: fromNow({}),
+      hasFutureOptions: true,
+      participantActiveAt: fromNow({ hours: -1 }),
+      expiresAt: fromNow({ days: -2 }),
+    });
+    createdPollIds.push(expiredPaidPoll.id);
+
+    const expiredPoll = await createTestPoll({
+      id: "expired-poll",
+      title: "Expired poll",
+      userId: owner.id,
+      updatedAt: fromNow({}),
+      expiresAt: fromNow({ days: -2 }),
+    });
+    createdPollIds.push(expiredPoll.id);
+
+    const expiresLaterPoll = await createTestPoll({
+      id: "expires-later-poll",
+      title: "Expires later",
+      userId: owner.id,
+      updatedAt: fromNow({}),
+      expiresAt: fromNow({ days: 5 }),
+    });
+    createdPollIds.push(expiresLaterPoll.id);
+
+    const noExpiryPoll = await createTestPoll({
+      id: "no-expiry-poll",
+      title: "No expiry",
+      userId: owner.id,
+      updatedAt: fromNow({}),
+    });
+    createdPollIds.push(noExpiryPoll.id);
+
+    const response = await request.get(
+      `${baseURL}/api/house-keeping/delete-expired-polls`,
+      { headers: { Authorization: `Bearer ${CRON_SECRET}` } },
+    );
+
+    expect(response.ok()).toBeTruthy();
+    const responseData = await response.json();
+    expect(responseData.success).toBeTruthy();
+    expect(responseData.summary.markedDeleted).toBe(2);
+
+    const find = (id: string) => prisma.poll.findUnique({ where: { id } });
+
+    for (const id of [expiredPaidPoll.id, expiredPoll.id]) {
+      const poll = await find(id);
+      expect(poll?.deleted).toBe(true);
+      expect(poll?.deletedAt).not.toBeNull();
+    }
+
+    for (const id of [expiresLaterPoll.id, noExpiryPoll.id]) {
+      const poll = await find(id);
+      expect(poll?.deleted).toBe(false);
+      expect(poll?.deletedAt).toBeNull();
+    }
   });
 
   test("should permanently remove polls that have been marked as deleted for more than 7 days", async ({

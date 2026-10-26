@@ -13,9 +13,12 @@ export class NewPollPage {
     name,
     enableComments,
     allDay,
+    expiryDate,
   }: {
     name: string;
     enableComments?: boolean;
+    /** Types a date into the expiry picker, as month, day and year digits. */
+    expiryDate?: string;
     /** Creates a date poll rather than the default time poll. */
     allDay?: boolean;
   }): Promise<PollPage> {
@@ -64,6 +67,12 @@ export class NewPollPage {
     if (enableComments) {
       // Comments are off by default; opt in to the legacy comments setting
       await page.getByRole("switch", { name: /comments/i }).click();
+    }
+
+    if (expiryDate) {
+      const expiry = page.getByRole("group", { name: "Expiry date" });
+      await expiry.getByRole("spinbutton", { name: /month/i }).click();
+      await page.keyboard.type(expiryDate);
     }
 
     await page.getByRole("button", { name: /^create poll$/i }).click();

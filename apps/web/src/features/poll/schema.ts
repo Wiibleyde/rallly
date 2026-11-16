@@ -1,4 +1,8 @@
 import * as z from "zod";
+import {
+  MAX_OPTION_CAPACITY,
+  MIN_OPTION_CAPACITY,
+} from "@/features/poll/constants";
 
 // Descriptions are Markdown pushed raw into the iCal DESCRIPTION. RFC 5545 sets
 // no length limit; the binding constraint is Google Calendar, which caps the
@@ -18,6 +22,14 @@ export const MAX_COMMENT_AUTHOR_NAME_LENGTH = 100;
 // Response notes ship in the new-participant notification email, so they must
 // be bounded. A note is short context alongside a response, not discussion.
 export const MAX_RESPONSE_NOTE_LENGTH = 500;
+
+// Places per option. Null is no limit, never 0: an option nobody can
+// answer yes to is what deleting it is for.
+export const optionCapacitySchema = z
+  .number()
+  .int()
+  .min(MIN_OPTION_CAPACITY)
+  .max(MAX_OPTION_CAPACITY);
 
 export const pollStatusSchema = z.enum([
   "open",

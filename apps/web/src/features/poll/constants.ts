@@ -2,6 +2,11 @@ export const MAX_POLL_OPTIONS = 100;
 
 export const MAX_PARTICIPANTS = 1000;
 
+// Bounds of the places per option an organizer can set. A cap above the
+// poll's own participant limit could never be reached.
+export const MIN_OPTION_CAPACITY = 1;
+export const MAX_OPTION_CAPACITY = MAX_PARTICIPANTS;
+
 // Display order of the built-in vote types.
 export const VOTE_TYPES = ["yes", "ifNeedBe", "no"] as const;
 

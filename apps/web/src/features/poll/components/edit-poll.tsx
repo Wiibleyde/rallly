@@ -92,6 +92,7 @@ function getDefaultValues(poll: PollDetails): NewEventData {
     hideScores: poll.hideScores,
     enableComments: !poll.disableComments,
     allowTentativeVotes: poll.allowTentativeVotes,
+    optionCapacity: poll.optionCapacity,
     requireParticipantEmail: poll.requireParticipantEmail,
   };
 }
@@ -165,6 +166,7 @@ const settingFields = [
   "hideScores",
   "enableComments",
   "allowTentativeVotes",
+  "optionCapacity",
   "requireParticipantEmail",
 ] as const;
 
@@ -233,6 +235,7 @@ export function EditPoll({
       input.hideScores = data.hideScores;
       input.disableComments = !data.enableComments;
       input.allowTentativeVotes = data.allowTentativeVotes;
+      input.optionCapacity = data.optionCapacity;
       input.requireParticipantEmail = data.requireParticipantEmail;
     }
 

@@ -1,0 +1,160 @@
+name: DevDocker image
+
+# Builds the self-hosted image of this fork for the DevDocker stack
+# (github.com/Wiibleyde/DevDocker), publishes it to GHCR, scans it, then asks
+# the VPS to redeploy. The upstream docker-image.yml (Docker Hub, tags only) is
+# left untouched.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: devdocker-image
+  cancel-in-progress: true
+
+env:
+  IMAGE: ghcr.io/wiibleyde/rallly
+
+jobs:
+  build:
+    name: Build (${{ matrix.platform }})
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - platform: linux/amd64
+            os: ubuntu-24.04
+          # Native arm64 runner: QEMU emulation of a Next.js build takes hours.
+          # The arm64 variant is what a teammate on Apple Silicon pulls locally.
+          - platform: linux/arm64
+            os: ubuntu-24.04-arm
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      digest_linux_amd64: ${{ steps.digest.outputs.digest_linux_amd64 }}
+      digest_linux_arm64: ${{ steps.digest.outputs.digest_linux_arm64 }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ${{ env.IMAGE }}
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - id: build
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: ./apps/web/Dockerfile
+          platforms: ${{ matrix.platform }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            APP_VERSION=${{ github.sha }}
+            SELF_HOSTED=true
+          outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=${{ matrix.platform }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.platform }}
+
+      - id: digest
+        env:
+          PLATFORM: ${{ matrix.platform }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: echo "digest_${PLATFORM//\//_}=${DIGEST}" >> "$GITHUB_OUTPUT"
+
+  publish:
+    name: Publish manifest
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      # `main` is what the stack pulls; `sha-<commit>` is the rollback handle
+      # (set RALLLY_TAG to it in the stack's .env).
+      - name: Create multi-arch manifest
+        env:
+          AMD64: ${{ needs.build.outputs.digest_linux_amd64 }}
+          ARM64: ${{ needs.build.outputs.digest_linux_arm64 }}
+        run: |
+          docker buildx imagetools create \
+            -t "$IMAGE:main" \
+            -t "$IMAGE:sha-${GITHUB_SHA::7}" \
+            "$IMAGE@$AMD64" "$IMAGE@$ARM64"
+          docker buildx imagetools inspect "$IMAGE:sha-${GITHUB_SHA::7}"
+
+  scan:
+    name: Trivy scan
+    needs: [build, publish]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      # Report only: the base image (node:24-slim) always carries a few
+      # unfixable CVEs, and a red pipeline for those would only teach the team
+      # to ignore it. The table lands in the run summary; docs/security.md in
+      # DevDocker comments the findings.
+      - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ env.IMAGE }}@${{ needs.build.outputs.digest_linux_amd64 }}
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          format: table
+          output: trivy.txt
+          exit-code: "0"
+
+      - name: Publish report
+        run: |
+          {
+            echo '## Trivy — HIGH/CRITICAL with a fix available'
+            echo '```'
+            cat trivy.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy:
+    name: Deploy to VPS
+    needs: [publish, scan]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://rallly.wiibleyde.dev
+    concurrency:
+      group: devdocker-deploy
+      cancel-in-progress: false
+    steps:
+      # The key is pinned server-side to `command="…/deploy.sh",restrict`: it
+      # can trigger a redeploy and nothing else, whatever this step sends.
+      - name: Trigger deploy over SSH
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.DEPLOY_SSH_KNOWN_HOSTS }}
+          SSH_TARGET: ${{ secrets.DEPLOY_SSH_TARGET }}
+        run: |
+          if [ -z "$SSH_KEY" ]; then
+            echo "::notice::DEPLOY_SSH_KEY is not set on this repository; skipping deploy"
+            exit 0
+          fi
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy
+          chmod 600 ~/.ssh/deploy
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deploy -o IdentitiesOnly=yes -o BatchMode=yes "$SSH_TARGET" deploy

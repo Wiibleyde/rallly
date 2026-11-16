@@ -272,9 +272,14 @@ export function VoteForm({
                 ? t("pollClosedDescription", {
                     defaultValue: "No more responses are being accepted.",
                   })
-                : t("actionErrorInternalServerError", {
-                    defaultValue: "An internal server error occurred",
-                  }),
+                : result.reason === "optionFull"
+                  ? t("voteErrorOptionFull", {
+                      defaultValue:
+                        "One of the options you answered yes to has just filled up. Pick another one.",
+                    })
+                  : t("actionErrorInternalServerError", {
+                      defaultValue: "An internal server error occurred",
+                    }),
             );
             return;
           }

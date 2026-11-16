@@ -9,11 +9,19 @@ import {
   findPendingPollInvite,
 } from "@/features/poll/invite/mutations";
 import { revalidatePollPages } from "@/features/poll/mutations";
-import { generateAccessToken } from "@/features/poll/utils";
+import {
+  findOptionsOverCapacity,
+  generateAccessToken,
+} from "@/features/poll/utils";
 import type { SpaceTier } from "@/features/space/schema";
 import { scheduleWebhookDispatch } from "@/features/webhook/mutations";
 
-type WriteRefusal = "notFound" | "closed" | "full" | "tentativeVotesNotAllowed";
+type WriteRefusal =
+  | "notFound"
+  | "closed"
+  | "full"
+  | "tentativeVotesNotAllowed"
+  | "optionFull";
 
 class WriteRefusedError extends Error {
   constructor(public readonly reason: WriteRefusal) {
@@ -36,9 +44,14 @@ async function lockOpenPoll(
   votes: { type: VoteType }[],
 ) {
   const [poll] = await tx.$queryRaw<
-    { status: string; deleted: boolean; allow_tentative_votes: boolean }[]
+    {
+      status: string;
+      deleted: boolean;
+      allow_tentative_votes: boolean;
+      option_capacity: number | null;
+    }[]
   >`
-    SELECT status, deleted, allow_tentative_votes
+    SELECT status, deleted, allow_tentative_votes, option_capacity
     FROM polls WHERE id = ${pollId} FOR UPDATE
   `;
 
@@ -58,6 +71,68 @@ async function lockOpenPoll(
     votes.some((vote) => vote.type === "ifNeedBe")
   ) {
     throw new WriteRefusedError("tentativeVotesNotAllowed");
+  }
+
+  return { optionCapacity: poll.option_capacity ?? null };
+}
+
+/**
+ * Refuses a response that would answer yes past an option's places. Runs
+ * after `lockOpenPoll`: every vote write takes the poll row lock first, so
+ * the counts read here cannot change before this transaction commits, and
+ * two responses can never both take an option's last place.
+ *
+ * The responder's own votes are left out of the count, and a yes they
+ * already hold is kept even when the organizer has since lowered the cap.
+ */
+async function assertOptionCapacity(
+  tx: Prisma.TransactionClient,
+  {
+    pollId,
+    optionCapacity,
+    votes,
+    participantId,
+  }: {
+    pollId: string;
+    optionCapacity: number | null;
+    votes: { optionId: string; type: VoteType }[];
+    /** The response being edited; absent for a new one. */
+    participantId?: string;
+  },
+) {
+  if (optionCapacity === null || !votes.some((v) => v.type === "yes")) {
+    return;
+  }
+
+  const [othersYes, heldYes] = await Promise.all([
+    tx.vote.groupBy({
+      by: ["optionId"],
+      where: {
+        pollId,
+        type: "yes",
+        ...(participantId && { participantId: { not: participantId } }),
+      },
+      _count: { _all: true },
+    }),
+    participantId
+      ? tx.vote.findMany({
+          where: { participantId, type: "yes" },
+          select: { optionId: true },
+        })
+      : [],
+  ]);
+
+  const overCapacity = findOptionsOverCapacity({
+    votes,
+    heldYes: new Set(heldYes.map((vote) => vote.optionId)),
+    othersYesCounts: new Map(
+      othersYes.map((row) => [row.optionId, row._count._all]),
+    ),
+    capacity: optionCapacity,
+  });
+
+  if (overCapacity.length > 0) {
+    throw new WriteRefusedError("optionFull");
   }
 }
 
@@ -169,7 +244,12 @@ export async function addParticipant({
         validOptionIds.has(optionId),
       );
 
-      await lockOpenPoll(tx, pollId, validVotes);
+      const { optionCapacity } = await lockOpenPoll(tx, pollId, validVotes);
+      await assertOptionCapacity(tx, {
+        pollId,
+        optionCapacity,
+        votes: validVotes,
+      });
 
       // Counted under the lock so two responses cannot both pass at the cap.
       const participantCount = await tx.participant.count({
@@ -290,15 +370,24 @@ export async function updateParticipantVotes({
 }): Promise<EditParticipantResult> {
   try {
     await prisma.$transaction(async (tx) => {
-      await lockOpenPoll(tx, pollId, votes);
+      const { optionCapacity } = await lockOpenPoll(tx, pollId, votes);
       await assertParticipantInPoll(tx, participantId, pollId);
-
-      await tx.vote.deleteMany({ where: { participantId } });
 
       const validOptionIds = await listValidOptionIds(tx, pollId);
       const validVotes = votes.filter(({ optionId }) =>
         validOptionIds.has(optionId),
       );
+
+      // Before the delete below: the yes votes the response already holds
+      // are what keeps its places.
+      await assertOptionCapacity(tx, {
+        pollId,
+        optionCapacity,
+        votes: validVotes,
+        participantId,
+      });
+
+      await tx.vote.deleteMany({ where: { participantId } });
 
       await tx.vote.createMany({
         data: validVotes.map(({ optionId, type }) => ({

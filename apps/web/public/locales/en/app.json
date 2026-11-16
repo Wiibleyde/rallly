@@ -1128,6 +1128,7 @@
   "viewInvites": "View invites",
   "viewResults": "View results",
   "voteBarLabel": "{yes} yes, {ifNeedBe} if need be, out of {total, plural, one {1 response} other {# responses}}",
+  "voteErrorOptionFull": "One of the options you answered yes to has just filled up. Pick another one.",
   "voteOptionsLockedDescription": "Locked: participants have already answered \"if need be\".",
   "voteOptionsSettingDescription": "The answers participants can give for each option.",
   "voteOptionsSettingTitle": "Vote options",

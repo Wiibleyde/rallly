@@ -276,3 +276,54 @@ export function getFinalizePlanGate({
   }
   return null;
 }
+
+/** An option's places under the poll's per-option cap. */
+export type OptionCapacity = { taken: number; max: number };
+
+/**
+ * Whether the viewer may answer yes to an option. A saved yes already holds
+ * a place, so it is always kept, even once the cap has been lowered below
+ * the option's count; the same rule as `findOptionsOverCapacity` on the
+ * server.
+ */
+export function hasRoomForYes({
+  capacity,
+  savedVote,
+}: {
+  capacity: OptionCapacity | null;
+  savedVote: VoteType | undefined;
+}) {
+  if (!capacity || savedVote === "yes") {
+    return true;
+  }
+  return capacity.taken < capacity.max;
+}
+
+/**
+ * The options a response would push past the cap: a yes the responder did
+ * not already hold, on an option whose other yes votes fill every place.
+ * A yes already held is never refused, so lowering the cap below an option's
+ * count keeps the votes it has and only stops new ones.
+ *
+ * `othersYesCounts` excludes the responder's own votes.
+ */
+export function findOptionsOverCapacity({
+  votes,
+  heldYes,
+  othersYesCounts,
+  capacity,
+}: {
+  votes: { optionId: string; type: VoteType }[];
+  heldYes: ReadonlySet<string>;
+  othersYesCounts: ReadonlyMap<string, number>;
+  capacity: number;
+}) {
+  return votes
+    .filter(
+      (vote) =>
+        vote.type === "yes" &&
+        !heldYes.has(vote.optionId) &&
+        (othersYesCounts.get(vote.optionId) ?? 0) >= capacity,
+    )
+    .map((vote) => vote.optionId);
+}

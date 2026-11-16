@@ -4,6 +4,7 @@ import { Controller } from "react-hook-form";
 import { useParticipants } from "@/features/poll/client";
 import { usePoll } from "@/features/poll/components/poll-context";
 import { useVotingForm } from "@/features/poll/components/voting-form";
+import { hasRoomForYes } from "@/features/poll/utils";
 import type { ParsedDateTimeOpton } from "@/lib/utils/date-time-utils";
 import { getOptionDateTimeLabel } from "@/lib/utils/date-time-utils";
 import DateOption from "./date-option";
@@ -20,8 +21,10 @@ const PollOptions: React.FunctionComponent<PollOptions> = ({
   editable,
   selectedParticipantId,
 }) => {
-  const { control } = useVotingForm();
-  const { getScore, getVote, optionIds, poll } = usePoll();
+  const { control, watch } = useVotingForm();
+  const { getScore, getVote, getCapacity, optionIds, poll } = usePoll();
+  // The response being edited; its saved yes votes keep their places.
+  const editedParticipantId = watch("participantId");
   const { participants: allParticipants } = useParticipants();
   const selectedParticipant = selectedParticipantId
     ? allParticipants.find(
@@ -64,6 +67,13 @@ const PollOptions: React.FunctionComponent<PollOptions> = ({
                       <TimeSlotOption
                         onChange={handleChange}
                         allowTentativeVotes={poll.allowTentativeVotes}
+                        capacity={getCapacity(option.optionId)}
+                        canVoteYes={hasRoomForYes({
+                          capacity: getCapacity(option.optionId),
+                          savedVote: editedParticipantId
+                            ? getVote(editedParticipantId, option.optionId)
+                            : undefined,
+                        })}
                         optionId={option.optionId}
                         optionLabel={getOptionDateTimeLabel(option)}
                         yesScore={score.yes}
@@ -81,6 +91,13 @@ const PollOptions: React.FunctionComponent<PollOptions> = ({
                       <DateOption
                         onChange={handleChange}
                         allowTentativeVotes={poll.allowTentativeVotes}
+                        capacity={getCapacity(option.optionId)}
+                        canVoteYes={hasRoomForYes({
+                          capacity: getCapacity(option.optionId),
+                          savedVote: editedParticipantId
+                            ? getVote(editedParticipantId, option.optionId)
+                            : undefined,
+                        })}
                         optionId={option.optionId}
                         optionLabel={getOptionDateTimeLabel(option)}
                         yesScore={score.yes}

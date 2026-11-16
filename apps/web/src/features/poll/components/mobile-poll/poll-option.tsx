@@ -12,8 +12,10 @@ import {
 } from "@rallly/ui/dialog";
 import * as m from "motion/react-m";
 import type * as React from "react";
+import { OptionCapacityBadge } from "@/features/poll/components/option-capacity";
 import { IfScoresVisible } from "@/features/poll/components/visibility";
 import { PollOptionVoteSummary } from "@/features/poll/components/vote-breakdown-dialog";
+import type { OptionCapacity } from "@/features/poll/utils";
 import { Trans, useTranslation } from "@/i18n/client";
 import { ConnectedScoreSummary } from "../score-summary";
 import VoteIcon from "../vote-icon";
@@ -31,6 +33,10 @@ export interface PollOptionProps {
   optionLabel: string;
   /** When false the segmented control offers yes and no only. */
   allowTentativeVotes?: boolean;
+  /** Places taken by yes votes; null when the poll sets no limit. */
+  capacity?: OptionCapacity | null;
+  /** False when the option has no place left for this response. */
+  canVoteYes?: boolean;
 }
 
 const PollOption: React.FunctionComponent<PollOptionProps> = ({
@@ -44,6 +50,8 @@ const PollOption: React.FunctionComponent<PollOptionProps> = ({
   yesScore,
   ifNeedBeScore,
   allowTentativeVotes = true,
+  capacity = null,
+  canVoteYes = true,
 }) => {
   const { t } = useTranslation();
   const dialog = useDialog();
@@ -69,7 +77,14 @@ const PollOption: React.FunctionComponent<PollOptionProps> = ({
       >
         {showVote ? <VoteIcon type={vote} /> : null}
       </span>
-      {children}
+      {capacity ? (
+        <div className="flex min-w-0 flex-col items-start gap-0.5">
+          {children}
+          <OptionCapacityBadge capacity={capacity} />
+        </div>
+      ) : (
+        children
+      )}
       <IfScoresVisible>
         <Button
           {...dialog.triggerProps}
@@ -117,6 +132,7 @@ const PollOption: React.FunctionComponent<PollOptionProps> = ({
             onChange={onChange}
             optionLabel={optionLabel}
             allowTentativeVotes={allowTentativeVotes}
+            canVoteYes={canVoteYes}
           />
         </m.div>
       ) : null}

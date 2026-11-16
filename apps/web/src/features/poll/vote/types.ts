@@ -1,6 +1,7 @@
 import type { PollConferencing } from "@/features/conferencing/schema";
 import type { VoteType } from "@/features/poll/constants";
 import type { PollClosedReason, PollStatus } from "@/features/poll/schema";
+import type { OptionCapacity } from "@/features/poll/utils";
 
 /** One option with its tally. `score` is null when the poll hides scores. */
 export type VoteResult = {
@@ -8,6 +9,8 @@ export type VoteResult = {
   startTime: Date;
   duration: number;
   score: { yes: number; ifNeedBe: number } | null;
+  /** Places taken by yes votes; null when the poll sets no limit. */
+  capacity: OptionCapacity | null;
 };
 
 /** The viewer's own response. */

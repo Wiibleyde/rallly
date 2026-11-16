@@ -3,9 +3,11 @@ import { cn } from "@rallly/ui";
 import { Button } from "@rallly/ui/button";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import * as React from "react";
+import { OptionCapacityBadge } from "@/features/poll/components/option-capacity";
 import VoteIcon from "@/features/poll/components/vote-icon";
 import { VoteSegmentedControl } from "@/features/poll/components/vote-segmented-control";
 import type { VoteType } from "@/features/poll/constants";
+import { hasRoomForYes } from "@/features/poll/utils";
 import { useVote } from "@/features/poll/vote/components/vote-form";
 import { VoteScore } from "@/features/poll/vote/components/vote-score";
 import type { VoteResult, VoteViewProps } from "@/features/poll/vote/types";
@@ -115,6 +117,13 @@ function TimeOption({
           timeZone: readZone,
         })}
       </p>
+      {result.capacity ? (
+        <OptionCapacityBadge
+          capacity={result.capacity}
+          compact
+          className="mt-1"
+        />
+      ) : null}
       <div className="mt-1.5">
         <VoteScore
           optionId={result.optionId}
@@ -133,6 +142,10 @@ function TimeOption({
             onChange={setVote}
             optionLabel={label}
             allowTentativeVotes={allowTentativeVotes}
+            canVoteYes={hasRoomForYes({
+              capacity: result.capacity,
+              savedVote,
+            })}
             className="w-full"
           />
         ) : (

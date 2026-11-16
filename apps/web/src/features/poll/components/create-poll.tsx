@@ -147,6 +147,7 @@ export const CreatePoll = ({
       hideParticipants: false,
       enableComments: false,
       allowTentativeVotes: true,
+      optionCapacity: null,
       duration: 60,
       lockTimeZone: false,
       allDay: false,
@@ -215,6 +216,7 @@ export const CreatePoll = ({
               disableComments: !formData?.enableComments,
               hideScores: formData?.hideScores,
               allowTentativeVotes: formData?.allowTentativeVotes,
+              optionCapacity: formData?.optionCapacity ?? null,
               requireParticipantEmail: formData?.requireParticipantEmail,
               options: required(formData?.options).map((option) => ({
                 startDate: option.type === "date" ? option.date : option.start,

@@ -38,7 +38,10 @@ import {
   getPolls,
   hasPollAdminAccess,
 } from "@/features/poll/data";
-import { MAX_POLL_DESCRIPTION_LENGTH } from "@/features/poll/schema";
+import {
+  MAX_POLL_DESCRIPTION_LENGTH,
+  optionCapacitySchema,
+} from "@/features/poll/schema";
 import {
   getFinalizePlanGate,
   summarizeNotifySelection,
@@ -219,6 +222,7 @@ export const polls = router({
         hideScores: z.boolean().optional(),
         disableComments: z.boolean().optional(),
         allowTentativeVotes: z.boolean().optional(),
+        optionCapacity: optionCapacitySchema.nullish(),
         requireParticipantEmail: z.boolean().optional(),
         options: z
           .object({
@@ -347,6 +351,7 @@ export const polls = router({
             hideParticipants: input.hideParticipants,
             disableComments: input.disableComments,
             allowTentativeVotes: input.allowTentativeVotes,
+            optionCapacity: input.optionCapacity ?? null,
             hideScores: input.hideScores,
             requireParticipantEmail: input.requireParticipantEmail,
             spaceId,
@@ -424,6 +429,7 @@ export const polls = router({
           timezone: input.timeZone,
           disableComments: poll.disableComments,
           allowTentativeVotes: poll.allowTentativeVotes,
+          optionCapacity: poll.optionCapacity,
           hideParticipants: poll.hideParticipants,
           hideScores: poll.hideScores,
           requireParticipantEmail: poll.requireParticipantEmail,
@@ -457,6 +463,8 @@ export const polls = router({
         hideParticipants: z.boolean().optional(),
         disableComments: z.boolean().optional(),
         allowTentativeVotes: z.boolean().optional(),
+        // Omitted leaves it unchanged; null removes the limit.
+        optionCapacity: optionCapacitySchema.nullable().optional(),
         hideScores: z.boolean().optional(),
         requireParticipantEmail: z.boolean().optional(),
       }),
@@ -587,6 +595,7 @@ export const polls = router({
             hideScores: true,
             disableComments: true,
             allowTentativeVotes: true,
+            optionCapacity: true,
             requireParticipantEmail: true,
           },
         });
@@ -698,6 +707,9 @@ export const polls = router({
             hideParticipants: input.hideParticipants,
             disableComments: input.disableComments,
             allowTentativeVotes: input.allowTentativeVotes,
+            // Lowering it keeps the yes votes already cast; the cap only
+            // refuses new ones (see assertOptionCapacity).
+            optionCapacity: input.optionCapacity,
             requireParticipantEmail: input.requireParticipantEmail,
             kind,
           },
@@ -732,6 +744,7 @@ export const polls = router({
             hideScores: prior.hideScores,
             disableComments: prior.disableComments,
             allowTentativeVotes: prior.allowTentativeVotes,
+            optionCapacity: prior.optionCapacity,
             requireParticipantEmail: prior.requireParticipantEmail,
           },
           next: {
@@ -744,6 +757,7 @@ export const polls = router({
             hideScores: input.hideScores,
             disableComments: input.disableComments,
             allowTentativeVotes: input.allowTentativeVotes,
+            optionCapacity: input.optionCapacity,
             requireParticipantEmail: input.requireParticipantEmail,
           },
         });
@@ -811,6 +825,7 @@ export const polls = router({
           description: true,
           disableComments: true,
           allowTentativeVotes: true,
+          optionCapacity: true,
           requireParticipantEmail: true,
           hideParticipants: true,
           hideScores: true,
@@ -862,6 +877,7 @@ export const polls = router({
         input.hideParticipants !== undefined ||
         input.disableComments !== undefined ||
         input.allowTentativeVotes !== undefined ||
+        input.optionCapacity !== undefined ||
         input.hideScores !== undefined ||
         input.requireParticipantEmail !== undefined;
 
@@ -898,6 +914,7 @@ export const polls = router({
           properties: {
             disable_comments: !!updatedPoll.disableComments,
             allow_tentative_votes: !!updatedPoll.allowTentativeVotes,
+            option_capacity: updatedPoll.optionCapacity,
             hide_participants: !!updatedPoll.hideParticipants,
             hide_scores: !!updatedPoll.hideScores,
             require_participant_email: !!updatedPoll.requireParticipantEmail,
@@ -977,6 +994,7 @@ export const polls = router({
           hideParticipants: true,
           disableComments: true,
           allowTentativeVotes: true,
+          optionCapacity: true,
           hideScores: true,
           requireParticipantEmail: true,
           options: {
@@ -1670,6 +1688,7 @@ export const polls = router({
           requireParticipantEmail: true,
           disableComments: true,
           allowTentativeVotes: true,
+          optionCapacity: true,
           spaceId: true,
           space: { select: { tier: true } },
           kind: true,
@@ -1715,6 +1734,7 @@ export const polls = router({
             hideScores: poll.hideScores,
             disableComments: poll.disableComments,
             allowTentativeVotes: poll.allowTentativeVotes,
+            optionCapacity: poll.optionCapacity,
             kind: poll.kind,
             options: {
               create: poll.options,

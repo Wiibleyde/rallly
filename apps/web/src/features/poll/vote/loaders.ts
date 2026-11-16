@@ -50,8 +50,9 @@ export const loadVotePage = cache(
     const [response, scores, participantCount] = await Promise.all([
       responsePromise,
       // Scores stay hidden until the viewer has responded, so they are not
-      // read at all when they cannot be shown.
-      poll.hideScores
+      // read at all when they cannot be shown. A poll with places per option
+      // always reads them: the places left come from the yes count.
+      poll.hideScores && poll.optionCapacity === null
         ? responsePromise.then((found) =>
             found ? getOptionScores({ pollId }) : null,
           )
@@ -104,6 +105,16 @@ export const loadVotePage = cache(
           scoresVisible && scores
             ? (scores.get(option.id) ?? { yes: 0, ifNeedBe: 0 })
             : null,
+        // Shown even when scores are hidden: someone choosing a slot has to
+        // know whether a place is left. It gives away the yes count only,
+        // and only on polls whose organizer chose to limit places.
+        capacity:
+          poll.optionCapacity === null
+            ? null
+            : {
+                taken: scores?.get(option.id)?.yes ?? 0,
+                max: poll.optionCapacity,
+              },
       })),
       response,
       canVote: poll.status === "open",

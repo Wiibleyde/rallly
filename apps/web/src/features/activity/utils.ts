@@ -31,6 +31,7 @@ export function getPollChanges({
     location: string | null;
     conferencing: PollConferencing | null;
     timeZone: string | null;
+    optionCapacity: number | null;
   } & PollSettings;
   next: {
     title?: string;
@@ -38,6 +39,8 @@ export function getPollChanges({
     location?: string;
     conferencing?: PollConferencing | null;
     timeZone: string | null;
+    /** Null removes the limit. */
+    optionCapacity?: number | null;
   } & Partial<PollSettings>;
 }): PollChange[] {
   const changes: PollChange[] = [];
@@ -71,6 +74,17 @@ export function getPollChanges({
 
   if (next.timeZone !== prior.timeZone) {
     changes.push({ field: "timeZone", from: prior.timeZone });
+  }
+
+  if (
+    next.optionCapacity !== undefined &&
+    next.optionCapacity !== prior.optionCapacity
+  ) {
+    changes.push({
+      field: "optionCapacity",
+      action: getChangeAction(prior.optionCapacity, next.optionCapacity),
+      from: prior.optionCapacity,
+    });
   }
 
   for (const field of settingFields) {

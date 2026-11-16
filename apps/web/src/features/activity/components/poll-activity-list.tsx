@@ -27,6 +27,7 @@ import {
   UserMinusIcon,
   UserPenIcon,
   UserPlusIcon,
+  UsersIcon,
   VenetianMaskIcon,
   VideoIcon,
 } from "lucide-react";
@@ -168,6 +169,7 @@ const iconByChange: Record<PollChange["field"], LucideIcon> = {
   disableComments: MessageCircleIcon,
   allowTentativeVotes: ListChecksIcon,
   requireParticipantEmail: MailIcon,
+  optionCapacity: UsersIcon,
   settings: Settings2Icon,
 };
 
@@ -326,6 +328,27 @@ function ChangeDescription({ change }: { change: PollChange }) {
         <Trans
           i18nKey="pollActivityParticipantEmailRequired"
           defaults="Participant email required"
+        />
+      );
+    case "optionCapacity":
+      return change.action === "added" || change.from === null ? (
+        <Trans
+          i18nKey="pollActivityOptionCapacityAdded"
+          defaults="Places per option limited"
+        />
+      ) : change.action === "removed" ? (
+        <Trans
+          i18nKey="pollActivityOptionCapacityRemoved"
+          defaults="Places per option no longer limited (was <b>{from}</b>)"
+          values={{ from: change.from }}
+          components={{ b }}
+        />
+      ) : (
+        <Trans
+          i18nKey="pollActivityOptionCapacityChanged"
+          defaults="Places per option changed from <b>{from}</b>"
+          values={{ from: change.from }}
+          components={{ b }}
         />
       );
     case "settings":

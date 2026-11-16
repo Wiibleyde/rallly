@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   filterCommentsForViewer,
   filterParticipantsByVote,
+  findOptionsOverCapacity,
   getFinalizePlanGate,
+  hasRoomForYes,
   maskParticipantsForViewer,
   rankOptionsByPopularity,
   summarizeNotifySelection,
@@ -397,5 +399,89 @@ describe("summarizeNotifySelection", () => {
     });
     expect(summary.notify_eligible_no_response).toBe(1);
     expect(summary.notify_selected_no_response).toBe(1);
+  });
+});
+
+describe("hasRoomForYes", () => {
+  it("always has room without a cap", () => {
+    expect(hasRoomForYes({ capacity: null, savedVote: undefined })).toBe(true);
+  });
+
+  it("has room while places are left", () => {
+    expect(
+      hasRoomForYes({ capacity: { taken: 1, max: 2 }, savedVote: undefined }),
+    ).toBe(true);
+  });
+
+  it("refuses a new yes once every place is taken", () => {
+    expect(
+      hasRoomForYes({ capacity: { taken: 2, max: 2 }, savedVote: "no" }),
+    ).toBe(false);
+    expect(
+      hasRoomForYes({ capacity: { taken: 2, max: 2 }, savedVote: "ifNeedBe" }),
+    ).toBe(false);
+  });
+
+  it("keeps yes open to someone already holding a place", () => {
+    expect(
+      hasRoomForYes({ capacity: { taken: 2, max: 2 }, savedVote: "yes" }),
+    ).toBe(true);
+  });
+
+  it("refuses a new yes when the cap was lowered below the count", () => {
+    expect(
+      hasRoomForYes({ capacity: { taken: 3, max: 2 }, savedVote: undefined }),
+    ).toBe(false);
+    // ...but whoever is already in keeps their place
+    expect(
+      hasRoomForYes({ capacity: { taken: 3, max: 2 }, savedVote: "yes" }),
+    ).toBe(true);
+  });
+});
+
+describe("findOptionsOverCapacity", () => {
+  const othersYesCounts = new Map([
+    ["a", 2],
+    ["b", 1],
+  ]);
+
+  it("returns the options a new yes would push past the cap", () => {
+    expect(
+      findOptionsOverCapacity({
+        votes: [
+          { optionId: "a", type: "yes" },
+          { optionId: "b", type: "yes" },
+          { optionId: "c", type: "yes" },
+        ],
+        heldYes: new Set(),
+        othersYesCounts,
+        capacity: 2,
+      }),
+    ).toEqual(["a"]);
+  });
+
+  it("only counts yes: if need be and no never take a place", () => {
+    expect(
+      findOptionsOverCapacity({
+        votes: [
+          { optionId: "a", type: "ifNeedBe" },
+          { optionId: "a", type: "no" },
+        ],
+        heldYes: new Set(),
+        othersYesCounts,
+        capacity: 2,
+      }),
+    ).toEqual([]);
+  });
+
+  it("never refuses a yes the responder already holds", () => {
+    expect(
+      findOptionsOverCapacity({
+        votes: [{ optionId: "a", type: "yes" }],
+        heldYes: new Set(["a"]),
+        othersYesCounts: new Map([["a", 5]]),
+        capacity: 2,
+      }),
+    ).toEqual([]);
   });
 });

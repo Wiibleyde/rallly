@@ -13,11 +13,14 @@ export class NewPollPage {
     name,
     enableComments,
     allDay,
+    optionCapacity,
   }: {
     name: string;
     enableComments?: boolean;
     /** Creates a date poll rather than the default time poll. */
     allDay?: boolean;
+    /** Limits how many participants can answer yes to each option. */
+    optionCapacity?: number;
   }): Promise<PollPage> {
     const page = this.page;
 
@@ -64,6 +67,10 @@ export class NewPollPage {
     if (enableComments) {
       // Comments are off by default; opt in to the legacy comments setting
       await page.getByRole("switch", { name: /comments/i }).click();
+    }
+
+    if (optionCapacity !== undefined) {
+      await page.getByLabel("Places per option").fill(String(optionCapacity));
     }
 
     await page.getByRole("button", { name: /^create poll$/i }).click();

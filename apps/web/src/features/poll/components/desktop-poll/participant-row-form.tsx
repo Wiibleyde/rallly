@@ -13,6 +13,7 @@ import {
 import { useOptions, usePoll } from "@/features/poll/components/poll-context";
 import { useVotingForm } from "@/features/poll/components/voting-form";
 import { YouAvatar } from "@/features/poll/components/you-avatar";
+import { hasRoomForYes } from "@/features/poll/utils";
 import { Trans, useTranslation } from "@/i18n/client";
 import { getOptionDateTimeLabel } from "@/lib/utils/date-time-utils";
 import { VoteSelector } from "../vote-selector";
@@ -34,9 +35,11 @@ const ParticipantRowForm = ({
 }: ParticipantRowFormProps) => {
   const { t } = useTranslation();
 
-  const { optionIds, poll } = usePoll();
+  const { optionIds, poll, getCapacity, getVote } = usePoll();
   const { options } = useOptions();
   const form = useVotingForm();
+  // The response being edited; its saved yes votes keep their places.
+  const participantId = form.watch("participantId");
 
   React.useEffect(() => {
     function cancel(e: KeyboardEvent) {
@@ -134,6 +137,12 @@ const ParticipantRowForm = ({
                     }
                     value={field.value?.type}
                     allowTentativeVotes={poll.allowTentativeVotes}
+                    canVoteYes={hasRoomForYes({
+                      capacity: getCapacity(optionId),
+                      savedVote: participantId
+                        ? getVote(participantId, optionId)
+                        : undefined,
+                    })}
                     onChange={(vote) => {
                       field.onChange({ optionId, type: vote });
                     }}

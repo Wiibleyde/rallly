@@ -2,7 +2,8 @@ import { cn } from "@rallly/ui";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@rallly/ui/tooltip";
 import { ClockIcon } from "lucide-react";
 import type * as React from "react";
-import { useOptions } from "@/features/poll/components/poll-context";
+import { OptionCapacityBadge } from "@/features/poll/components/option-capacity";
+import { useOptions, usePoll } from "@/features/poll/components/poll-context";
 import { ConnectedScoreSummary } from "@/features/poll/components/score-summary";
 
 const TimeRange: React.FunctionComponent<{
@@ -58,6 +59,7 @@ const scoreRowTop = monthRowHeight + dayRowHeight;
 
 const PollHeader = () => {
   const { options } = useOptions();
+  const { getCapacity } = usePoll();
 
   const monthGroups: { month: string; year: string; count: number }[] = [];
 
@@ -158,6 +160,7 @@ const PollHeader = () => {
                   />
                 ) : null}
                 <ConnectedScoreSummary optionId={option.optionId} />
+                <OptionCapacityBadge capacity={getCapacity(option.optionId)} />
               </div>
             </th>
           );

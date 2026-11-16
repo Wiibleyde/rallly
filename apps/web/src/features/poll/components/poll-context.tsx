@@ -4,6 +4,7 @@ import React from "react";
 import { useRequiredContext } from "@/components/use-required-context";
 import { useParticipants } from "@/features/poll/client";
 import type { PollDetails } from "@/features/poll/types";
+import type { OptionCapacity } from "@/features/poll/utils";
 import { useDateTimeConfig } from "@/lib/datetime/client";
 import {
   formatDateParts,
@@ -26,6 +27,8 @@ type PollContextValue = {
     skip: number;
   };
   getVote: (participantId: string, optionId: string) => VoteType | undefined;
+  /** Places taken by yes votes; null when the poll sets no limit. */
+  getCapacity: (optionId: string) => OptionCapacity | null;
 };
 
 export const PollContext = React.createContext<PollContextValue | null>(null);
@@ -89,6 +92,10 @@ export const PollContextProvider: React.FunctionComponent<{
         return vote?.type;
       },
       getScore,
+      getCapacity: (optionId) =>
+        poll.optionCapacity === null
+          ? null
+          : { taken: getScore(optionId).yes, max: poll.optionCapacity },
     };
   }, [getScore, participants, poll]);
 

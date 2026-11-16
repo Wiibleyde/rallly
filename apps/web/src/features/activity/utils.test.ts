@@ -12,6 +12,7 @@ const prior = {
   disableComments: false,
   allowTentativeVotes: true,
   requireParticipantEmail: false,
+  optionCapacity: null,
 };
 
 const unchanged = { timeZone: "Europe/London" };
@@ -118,6 +119,37 @@ describe("getPollChanges", () => {
           allowTentativeVotes: true,
           requireParticipantEmail: false,
         },
+      }),
+    ).toEqual([]);
+  });
+
+  it("records the places per option being set, changed and removed", () => {
+    expect(
+      getPollChanges({ prior, next: { ...unchanged, optionCapacity: 2 } }),
+    ).toEqual([{ field: "optionCapacity", action: "added", from: null }]);
+
+    const limited = { ...prior, optionCapacity: 2 };
+    expect(
+      getPollChanges({
+        prior: limited,
+        next: { ...unchanged, optionCapacity: 3 },
+      }),
+    ).toEqual([{ field: "optionCapacity", action: "changed", from: 2 }]);
+    expect(
+      getPollChanges({
+        prior: limited,
+        next: { ...unchanged, optionCapacity: null },
+      }),
+    ).toEqual([{ field: "optionCapacity", action: "removed", from: 2 }]);
+  });
+
+  it("records nothing when the places per option are omitted or unchanged", () => {
+    const limited = { ...prior, optionCapacity: 2 };
+    expect(getPollChanges({ prior: limited, next: unchanged })).toEqual([]);
+    expect(
+      getPollChanges({
+        prior: limited,
+        next: { ...unchanged, optionCapacity: 2 },
       }),
     ).toEqual([]);
   });

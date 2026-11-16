@@ -3,8 +3,10 @@ import { cn } from "@rallly/ui";
 import type { MonthGridDayProps } from "@rallly/ui/month-grid";
 import { MonthGrid } from "@rallly/ui/month-grid";
 import * as React from "react";
+import { OptionCapacityBadge } from "@/features/poll/components/option-capacity";
 import VoteIcon from "@/features/poll/components/vote-icon";
 import type { VoteType } from "@/features/poll/constants";
+import { hasRoomForYes } from "@/features/poll/utils";
 import {
   nextVoteType,
   useSetVote,
@@ -99,6 +101,7 @@ function OptionDayContent({
         allowTentativeVotes={ctx?.allowTentativeVotes ?? true}
         className="w-full"
       />
+      <OptionCapacityBadge capacity={result.capacity} compact />
     </>
   );
 }
@@ -204,10 +207,17 @@ export function VoteViewCalendar({
         return;
       }
       setVote(result.optionId, (current) =>
-        nextVoteType(current, poll.allowTentativeVotes),
+        nextVoteType(
+          current,
+          poll.allowTentativeVotes,
+          hasRoomForYes({
+            capacity: result.capacity,
+            savedVote: savedVotes.get(result.optionId),
+          }),
+        ),
       );
     },
-    [byDate, canVote, form, setVote, poll.allowTentativeVotes],
+    [byDate, canVote, form, setVote, poll.allowTentativeVotes, savedVotes],
   );
 
   const ctx = React.useMemo(

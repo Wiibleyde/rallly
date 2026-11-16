@@ -59,6 +59,10 @@ model Poll {
   /// negative. Turning it off only blocks new tentative votes; existing ones
   /// are kept and stay visible.
   allowTentativeVotes     Boolean           @default(true) @map("allow_tentative_votes")
+  /// How many participants may answer yes to each option. Null is no cap.
+  /// Only yes takes a place; lowering it keeps yes votes already cast and
+  /// only refuses new ones.
+  optionCapacity          Int?              @map("option_capacity")
   muted                   Boolean           @default(false)
 
   user           User?           @relation(fields: [userId], references: [id], onDelete: Cascade)

@@ -10,6 +10,7 @@ import {
   FieldLabel,
 } from "@rallly/ui/field";
 import { FormField } from "@rallly/ui/form";
+import { Input } from "@rallly/ui/input";
 import {
   Select,
   SelectContent,
@@ -24,6 +25,7 @@ import {
   ListChecksIcon,
   MailIcon,
   MessageCircleIcon,
+  UsersIcon,
   VenetianMaskIcon,
 } from "lucide-react";
 import { useFormContext } from "react-hook-form";
@@ -32,7 +34,11 @@ import { showPayWall, useIsFree } from "@/features/billing/client";
 import { ProBadge } from "@/features/billing/components/pro-badge";
 import type { PollSettingsFormData } from "@/features/poll/components/forms/types";
 import type { VoteType } from "@/features/poll/constants";
-import { Trans } from "@/i18n/client";
+import {
+  MAX_OPTION_CAPACITY,
+  MIN_OPTION_CAPACITY,
+} from "@/features/poll/constants";
+import { Trans, useTranslation } from "@/i18n/client";
 
 /**
  * Each answer as its icon plus its name, so the choice shows exactly what a
@@ -73,6 +79,7 @@ export const PollSettingsForm = ({
 }>) => {
   const form = useFormContext<PollSettingsFormData>();
   const isFree = useIsFree();
+  const { t } = useTranslation();
 
   return (
     <Card>
@@ -322,6 +329,63 @@ export const PollSettingsForm = ({
                 </Field>
               );
             }}
+          />
+          <FormField
+            control={form.control}
+            name="optionCapacity"
+            render={({ field }) => (
+              <Field orientation="horizontal">
+                <SettingIcon>
+                  <UsersIcon />
+                </SettingIcon>
+                <FieldContent>
+                  <FieldLabel htmlFor="option-capacity">
+                    <Trans
+                      i18nKey="optionCapacitySettingTitle"
+                      defaults="Places per option"
+                    />
+                  </FieldLabel>
+                  <FieldDescription>
+                    <Trans
+                      i18nKey="optionCapacitySettingDescription"
+                      defaults="Limit how many participants can answer yes to each option. Leave empty for no limit."
+                    />
+                  </FieldDescription>
+                </FieldContent>
+                {/* Empty is "no limit": the form holds null rather than 0 or
+                  NaN, so an untouched poll sends nothing to the server. */}
+                <Input
+                  id="option-capacity"
+                  type="number"
+                  inputMode="numeric"
+                  min={MIN_OPTION_CAPACITY}
+                  max={MAX_OPTION_CAPACITY}
+                  step={1}
+                  placeholder={t("optionCapacityNoLimit", {
+                    defaultValue: "No limit",
+                  })}
+                  className="w-28"
+                  value={field.value ?? ""}
+                  onChange={(event) => {
+                    const value = event.target.valueAsNumber;
+                    field.onChange(
+                      Number.isNaN(value)
+                        ? null
+                        : Math.min(
+                            MAX_OPTION_CAPACITY,
+                            Math.max(MIN_OPTION_CAPACITY, Math.trunc(value)),
+                          ),
+                    );
+                  }}
+                  onBlur={() => {
+                    field.onBlur();
+                    posthog?.capture("poll_settings:option_capacity_change", {
+                      option_capacity: field.value ?? null,
+                    });
+                  }}
+                />
+              </Field>
+            )}
           />
         </FieldGroup>
       </CardContent>

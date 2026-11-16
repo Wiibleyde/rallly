@@ -6,9 +6,12 @@ import {
 } from "@tanstack/react-table";
 import * as React from "react";
 import { DataList } from "@/components/data-list";
+import { OptionCapacityBadge } from "@/features/poll/components/option-capacity";
 import VoteIcon from "@/features/poll/components/vote-icon";
 import { VoteSegmentedControl } from "@/features/poll/components/vote-segmented-control";
 import type { VoteType } from "@/features/poll/constants";
+import type { OptionCapacity } from "@/features/poll/utils";
+import { hasRoomForYes } from "@/features/poll/utils";
 import { OptionDate } from "@/features/poll/vote/components/option-date";
 import {
   useVote,
@@ -58,12 +61,14 @@ function VoteCell({
   allowTentativeVotes,
   savedVote,
   canVote,
+  capacity,
 }: {
   optionId: string;
   optionLabel: string;
   allowTentativeVotes: boolean;
   savedVote?: VoteType;
   canVote: boolean;
+  capacity: OptionCapacity | null;
 }) {
   const { value, setVote, isEditing } = useVote(optionId);
 
@@ -76,6 +81,7 @@ function VoteCell({
       onChange={setVote}
       optionLabel={optionLabel}
       allowTentativeVotes={allowTentativeVotes}
+      canVoteYes={hasRoomForYes({ capacity, savedVote })}
     />
   );
 }
@@ -115,17 +121,21 @@ export function VoteViewList({
         cell: ({ row }) => (
           // DataList owns the row element, so the option cell carries the
           // handle tests use to find an option.
-          <span data-testid="poll-option" className="truncate">
-            {isTimeSlot ? (
-              <EventTimeRange
-                start={row.original.startTime}
-                end={endOf(row.original)}
-                allDay={false}
-                timeZone={poll.timeZone}
-              />
-            ) : (
-              <OptionDate value={row.original.startTime} />
-            )}
+          // Stacked below sm so the badge never truncates the time.
+          <span className="flex min-w-0 flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-2">
+            <span data-testid="poll-option" className="truncate">
+              {isTimeSlot ? (
+                <EventTimeRange
+                  start={row.original.startTime}
+                  end={endOf(row.original)}
+                  allDay={false}
+                  timeZone={poll.timeZone}
+                />
+              ) : (
+                <OptionDate value={row.original.startTime} />
+              )}
+            </span>
+            <OptionCapacityBadge capacity={row.original.capacity} />
           </span>
         ),
       }),
@@ -169,6 +179,7 @@ export function VoteViewList({
               allowTentativeVotes={poll.allowTentativeVotes}
               savedVote={savedVotes.get(result.optionId)}
               canVote={canVote}
+              capacity={result.capacity}
             />
           );
         },

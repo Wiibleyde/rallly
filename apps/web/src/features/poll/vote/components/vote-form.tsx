@@ -179,8 +179,12 @@ export function useLiveScore({
 export function nextVoteType(
   current: VoteType | undefined,
   allowTentativeVotes: boolean,
+  /** False skips yes: the option has no place left. */
+  canVoteYes = true,
 ): VoteType {
-  const types = getVoteTypes(allowTentativeVotes);
+  const types = getVoteTypes(allowTentativeVotes).filter(
+    (type) => canVoteYes || type !== "yes",
+  );
   const at = current ? types.indexOf(current) : -1;
   return types[(at + 1) % types.length];
 }
@@ -272,9 +276,14 @@ export function VoteForm({
                 ? t("pollClosedDescription", {
                     defaultValue: "No more responses are being accepted.",
                   })
-                : t("actionErrorInternalServerError", {
-                    defaultValue: "An internal server error occurred",
-                  }),
+                : result.reason === "optionFull"
+                  ? t("voteErrorOptionFull", {
+                      defaultValue:
+                        "One of the options you answered yes to has just filled up. Pick another one.",
+                    })
+                  : t("actionErrorInternalServerError", {
+                      defaultValue: "An internal server error occurred",
+                    }),
             );
             return;
           }
